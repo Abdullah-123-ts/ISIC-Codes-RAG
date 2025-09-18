@@ -141,7 +141,7 @@ def query_hierarchy(query):
 
 # ---------------- Streamlit UI ----------------
 def main():
-    st.title("📘 RAG Knowledge Base with LLM-enhanced matching")
+    st.title("📘 RAG Knowledge Base for ISIC codes")
 
     for f in SEARCH_HIERARCHY:
         if f in VECTOR_STORE_PATHS:
