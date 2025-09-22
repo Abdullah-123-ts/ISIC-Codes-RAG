@@ -1,189 +1,8 @@
-# # =============== CONFIG ==================
-# import os
-# from dotenv import load_dotenv
-# load_dotenv()
-# os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
-
-# import os
-# import re
-# import pandas as pd
-# import streamlit as st
-# from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-# from langchain_community.vectorstores import FAISS
-# from langchain.schema import Document
-
-# # ---------------- CONFIG ----------------
-# VECTOR_STORE_PATHS = {
-#     "DAFZA.xlsx": "store_dafza",
-#     "ISIC.xlsx": "store_isic"
-# }
-# SEARCH_HIERARCHY = ["DAFZA.xlsx", "ISIC.xlsx"]
-
-# embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-# llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-# knowledge_base = {}  # {file: {"db": ..., "df": ...}}
-
-# # ---------------- HELPERS ----------------
-# def load_dataframe(file_path):
-#     if file_path.endswith(".xlsx"):
-#         try:
-#             return pd.read_excel(file_path)
-#         except Exception as e:
-#             st.error(f"Error loading {file_path}: {e}")
-#             return None
-#     return None
-
-# def normalize_text(text):
-#     text = str(text).lower()
-#     text = re.sub(r"[\(\)\-\–]", " ", text)
-#     text = re.sub(r"\s+", " ", text).strip()
-#     return text
-
-# def build_documents_from_df(df, file_tag):
-#     docs = []
-#     for _, row in df.iterrows():
-#         if file_tag == "DAFZA.xlsx":
-#             text = f"{row.get('Activity List','')} {row.get('ISIC Description','')}"
-#             code = str(row.get("Class", ""))
-#         elif file_tag == "ISIC.xlsx":
-#             text = str(row.get("Activity name", ""))
-#             code = str(row.get("Class", ""))
-#         else:
-#             text = " ".join([str(v) for v in row.values])
-#             code = ""
-#         doc = Document(page_content=normalize_text(text), metadata={"code": code})
-#         docs.append(doc)
-#     return docs
-
-# # ----------- Vectorstore builder -----------
-# @st.cache_resource
-# def create_or_update_vectorstore(file_path, store_path):
-#     df = load_dataframe(file_path)
-#     if df is None:
-#         return None, None
-
-#     docs = build_documents_from_df(df, file_path)
-
-#     if os.path.exists(store_path):
-#         db = FAISS.load_local(store_path, embeddings, allow_dangerous_deserialization=True)
-#     else:
-#         db = FAISS.from_documents(docs, embeddings)
-#         db.save_local(store_path)
-
-#     return db, df
-
-# # ----------- Search functions -----------
-# def search_in_dataframe(df, query):
-#     query_norm = normalize_text(query)
-#     for col in df.columns:
-#         if any(k in col.lower() for k in ["activity", "description"]):
-#             for idx, val in df[col].astype(str).items():
-#                 if normalize_text(val) == query_norm:
-#                     return str(df.loc[idx, "Class"])
-#     return None
-
-# def vector_match_search(db, query, top_k=5):
-#     """Vector search + LLM reranking for best match."""
-#     if db is None:
-#         return None
-
-#     query_norm = normalize_text(query)
-#     results = db.similarity_search(query_norm, k=top_k)
-
-#     if not results:
-#         return None
-
-#     # Prepare candidate codes for LLM reranking
-#     candidates = [f"Code: {r.metadata.get('code','')} | Activity: {r.page_content}" for r in results]
-
-#     prompt = f"""
-# You are given a query: "{query}".
-# And a list of candidate activities with their codes:
-# {chr(10).join(candidates)}
-
-# Rank these candidates from most relevant to least relevant for the query, considering exact business meaning. 
-# Return only the code of the topmost relevant activity.
-# """
-#     try:
-#         response = llm(prompt)
-#         top_code = re.findall(r'\d+', response.content)
-#         if top_code:
-#             return top_code[0]
-#     except Exception:
-#         # fallback if LLM fails
-#         return results[0].metadata.get("code", None)
-#     return None
-
-# def query_hierarchy(query):
-#     """Exact → vector with LLM reranking following your hierarchy."""
-#     # 1️⃣ Exact in DAFZA
-#     code = search_in_dataframe(knowledge_base["DAFZA.xlsx"]["df"], query)
-#     if code:
-#         return f"✅ Exact match in DAFZA.xlsx → Code: {code}"
-
-#     # 2️⃣ Vector in DAFZA
-#     code = vector_match_search(knowledge_base["DAFZA.xlsx"]["db"], query)
-#     if code:
-#         return f"ℹ️ Nearest match in DAFZA.xlsx → Code: {code}"
-
-#     # 3️⃣ Exact in ISIC
-#     code = search_in_dataframe(knowledge_base["ISIC.xlsx"]["df"], query)
-#     if code:
-#         return f"✅ Exact match in ISIC.xlsx → Code: {code}"
-
-#     # 4️⃣ Vector in ISIC
-#     code = vector_match_search(knowledge_base["ISIC.xlsx"]["db"], query)
-#     if code:
-#         return f"ℹ️ Nearest match in ISIC.xlsx → Code: {code}"
-
-#     return "❌ No relevant activity code found."
-
-# # ---------------- Streamlit UI ----------------
-# def main():
-#     st.title("RAG Knowledge Base for ISIC codes")
-
-#     for f in SEARCH_HIERARCHY:
-#         if f in VECTOR_STORE_PATHS:
-#             db, df = create_or_update_vectorstore(f, VECTOR_STORE_PATHS[f])
-#             if db:
-#                 knowledge_base[f] = {"db": db, "df": df}
-
-#     st.success("Knowledge base ready! (cached)")
-
-#     query = st.text_input("Enter Activity / Description")
-#     if st.button("Search") and query:
-#         with st.spinner("Searching knowledge base..."):
-#             answer = query_hierarchy(query)
-#         st.write("### 🔍 Answer:")
-#         st.write(answer)
-
-# if __name__ == "__main__":
-#     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-##############dafza->mydan->spc->isic, at end vector + llm on all to pick best##############
-
-# rag_app.py
 import os
+import re
+import json
+import ast
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
@@ -191,27 +10,35 @@ from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
-import re
+from rapidfuzz import fuzz
+
+# ---------------- HELPERS ----------------
 
 def normalize_text(text: str) -> str:
+    if not isinstance(text, str):
+        return ""
     text = text.lower().strip()
     text = re.sub(r"&", "and", text)       # replace & with "and"
     text = re.sub(r"\s+", " ", text)       # collapse multiple spaces
     return text
 
 
-from rapidfuzz import fuzz
-
-def fuzzy_exact_match(query, df, threshold=90):
+def fuzzy_exact_match(query: str, df: pd.DataFrame, threshold: int = 95):
+    """Return the best-matching row (Series) and score if score >= threshold."""
     best_row = None
     best_score = 0
+    qn = normalize_text(query)
     for _, row in df.iterrows():
-        score = fuzz.ratio(normalize_text(query), normalize_text(row["activity name"]))
+        candidate = normalize_text(row.get("activity name", ""))
+        score = fuzz.ratio(qn, candidate)
         if score > best_score:
-            best_score, best_row = score, row
+            best_score = score
+            best_row = row
     if best_score >= threshold:
-        return best_row, best_score
+        return best_row, int(best_score)
     return None, None
+
+
 # ---------------- CONFIG ----------------
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -219,8 +46,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 VECTOR_STORE_DIR = "vectorstores"
 os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
 
-# List of Excel sheets in search order
+# Provide the Excel file names (same as original) — adjust to your paths if needed
 SHEETS_ORDER = ["dafza.xlsx", "meydan.xlsx", "spc.xlsx", "isic.xlsx"]
+
 
 # ---------------- LOAD SHEETS ----------------
 @st.cache_data
@@ -229,108 +57,182 @@ def load_sheets():
     dataframes = {}
     for sheet in SHEETS_ORDER:
         df = pd.read_excel(sheet)
+        # normalize column names to lowercase and trimmed
         df.columns = [c.strip().lower() for c in df.columns]
         if "activity name" not in df.columns or "class" not in df.columns:
             raise ValueError(f"Sheet {sheet} must contain 'Activity Name' and 'Class' columns.")
         dataframes[sheet] = df
     return dataframes
 
+
 # ---------------- VECTOR STORE ----------------
 @st.cache_resource
 def load_or_create_vectorstore(sheet_name: str, df: pd.DataFrame):
     """Create or load FAISS vector store for a given sheet."""
     store_path = os.path.join(VECTOR_STORE_DIR, f"{sheet_name}_faiss")
+    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
+
     if os.path.exists(store_path):
         vectorstore = FAISS.load_local(
             store_path,
-            OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY),
-            allow_dangerous_deserialization=True
+            embeddings,
+            allow_dangerous_deserialization=True,
         )
     else:
-        embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
         docs = [
-            Document(page_content=row["activity name"], metadata={"class": row["class"]})
+            Document(page_content=str(row["activity name"]), metadata={"class": str(row["class"])})
             for _, row in df.iterrows()
         ]
         vectorstore = FAISS.from_documents(docs, embeddings)
         vectorstore.save_local(store_path)
     return vectorstore
 
+
 # ---------------- SEARCH LOGIC ----------------
-def search_activity(query, dataframes, vectorstores):
-    """Search across all sheets with exact match first, then vector + LLM fallback."""
 
-    # # Step 1: Exact match in all sheets
-    # query_norm = normalize_text(query)
+def parse_json_like(text: str):
+    """Try to parse a JSON object from arbitrary LLM text with multiple fallbacks."""
+    text = text.strip()
+    # Direct JSON
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
 
-    # for sheet in SHEETS_ORDER:
-    #     df = dataframes[sheet]
-    #     df["normalized"] = df["activity name"].apply(normalize_text)
-    #     match = df[df["normalized"] == query_norm]
-    #     if not match.empty:
-    #         row = match.iloc[0]
-    #         return {
-    #             "source": sheet,
-    #             "activity": row["activity name"],
-    #             "code": row["class"],
-    #             "method": "Exact Match (Normalized)"
-    #         }
+    # Extract first {...} block and try parse
+    m = re.search(r"\{.*\}", text, re.S)
+    if m:
+        candidate = m.group(0)
+        try:
+            return json.loads(candidate)
+        except Exception:
+            try:
+                # fallback to python literal
+                return ast.literal_eval(candidate)
+            except Exception:
+                return {"llm_raw": text}
+    # nothing found
+    return {"llm_raw": text}
 
+
+def search_activity(query: str, dataframes: dict, vectorstores: dict):
+    """Search across all sheets with fuzzy-exact first, then vector + LLM fallback.
+
+    Returns a structured dict with keys: source, activity, code, method, and optional reason/score.
+    """
+
+    # 1) Fuzzy exact match across sheets (fast + deterministic)
     for sheet in SHEETS_ORDER:
         df = dataframes[sheet]
-        row, score = fuzzy_exact_match(query, df)
+        row, score = fuzzy_exact_match(query, df, threshold=95)
         if row is not None:
             return {
                 "source": sheet,
                 "activity": row["activity name"],
                 "code": row["class"],
-                "method": f"Fuzzy Exact Match ({score}%)"
+                "method": f"Fuzzy Exact Match ({score}%)",
+                "score": score,
             }
 
-    # Step 2: Vector similarity search in all sheets
+    # 2) Vector similarity search in all sheets (collect top candidates)
     all_candidates = []
     for sheet in SHEETS_ORDER:
-        docs = vectorstores[sheet].similarity_search(query, k=3)  # top 3 per sheet
+        docs = vectorstores[sheet].similarity_search(query, k=3)
         candidates = [
             {"sheet": sheet, "activity": d.page_content, "code": d.metadata.get("class")}
             for d in docs
         ]
         all_candidates.extend(candidates)
 
-    # Step 3: Use LLM to refine best choice
-    llm = ChatOpenAI(model="gpt-5-mini", openai_api_key=OPENAI_API_KEY, temperature=1)
-
+    # 3) Use LLM to refine best choice — ask for strict JSON
+    llm = ChatOpenAI(model="gpt-4o-mini", openai_api_key=OPENAI_API_KEY, temperature=0)
     prompt = f"""
-    The user is searching for an activity: "{query}".
-    Here are candidate activities with their codes from different sheets:
-    {all_candidates}
+You are given a user's query and candidate activities with their sheet names and codes.
+Choose the single best match from the candidates and return ONLY a JSON object with these keys:
+  - sheet: the filename (string)
+  - activity: the exact activity string you pick (string)
+  - code: the class/code for that activity (string)
+  - reason: a one-line reason for your choice (string)
+Candidates: {all_candidates}
+User query: "{query}"
+Respond with a JSON object and nothing else.
+"""
 
-    Please choose the single most appropriate code and activity based on business context.
-    Respond in JSON as: {{"sheet": "...", "activity": "...", "code": "..."}}.
-    """
     response = llm.invoke(prompt)
+    parsed = parse_json_like(response.content)
 
+    # If LLM returned the expected keys, use it
+    if isinstance(parsed, dict) and all(k in parsed for k in ("sheet", "activity", "code")):
+        return {
+            "source": parsed.get("sheet"),
+            "activity": parsed.get("activity"),
+            "code": parsed.get("code"),
+            "method": "Vector + LLM",
+            "reason": parsed.get("reason"),
+            "llm_raw": response.content,
+        }
+
+    # Fallback: choose the candidate with best fuzzy score to the query
+    if all_candidates:
+        best = max(
+            all_candidates,
+            key=lambda c: fuzz.ratio(normalize_text(query), normalize_text(c.get("activity", "")))
+        )
+        score = fuzz.ratio(normalize_text(query), normalize_text(best.get("activity", "")))
+        return {
+            "source": best.get("sheet"),
+            "activity": best.get("activity"),
+            "code": best.get("code"),
+            "method": "Vector (best candidate fallback)",
+            "score": int(score),
+            "llm_raw": response.content,
+        }
+
+    # Last resort: nothing found
     return {
-        "source": "Multiple Sheets",
-        "method": "Vector + GPT",
-        "raw_candidates": all_candidates,
-        "llm_response": response.content
+        "source": None,
+        "activity": None,
+        "code": None,
+        "method": "No match",
+        "llm_raw": response.content,
     }
 
+
 # ---------------- STREAMLIT APP ----------------
+
 def main():
     st.title("Activity Code Finder (RAG)")
-    st.write("Search for activity codes across multiple Excel sheets with exact + vector search fallback.")
+    st.write("Search for activity codes across multiple Excel sheets with fuzzy + vector + LLM fallback.")
 
-    dataframes = load_sheets()
+    try:
+        dataframes = load_sheets()
+    except Exception as e:
+        st.error(f"Failed to load sheets: {e}")
+        return
+
+    # Create/load vectorstores for each sheet
     vectorstores = {sheet: load_or_create_vectorstore(sheet, df) for sheet, df in dataframes.items()}
 
     query = st.text_input("Enter activity name/description:")
 
     if st.button("Search") and query:
         result = search_activity(query, dataframes, vectorstores)
+
         st.subheader("Result")
-        st.json(result)
+        if result.get("activity"):
+            st.success(result.get("activity"))
+            st.write("**Code:**", result.get("code"))
+            st.write("**Source sheet:**", result.get("source"))
+            st.write("**Method:**", result.get("method"))
+            if result.get("score") is not None:
+                st.write("**Score:**", result.get("score"))
+            if result.get("reason"):
+                st.write("**Reason:**", result.get("reason"))
+
+        else:
+            st.warning("No confident match found.")
+
+
 
 if __name__ == "__main__":
     main()
