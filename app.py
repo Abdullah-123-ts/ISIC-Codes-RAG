@@ -164,18 +164,26 @@ def search_activity(query: str, dataframes: dict, vectorstores: dict, use_llm: b
     # 3) LLM refinement (slower)
     llm = ChatOpenAI(model="gpt-4o-mini", openai_api_key=OPENAI_API_KEY, temperature=0)
     prompt = f"""
-You are given a user's query and candidate activities with their sheet names and codes.
-Choose the single best match based not only on related names like don't match hydropanel to swimming pool instead use
-semantic understanding of the activity. Also, try to infer the correct activity not just syntactically but semantically.
-Act like an expert in business activities classification especially ISIC codes.
-and return ONLY a JSON object with keys:
-  - sheet
-  - activity
-  - code
-  - reason
-Candidates: {all_candidates}
-User query: "{query}"
-"""
+    You are given:
+    - A user query (business activity name).
+    - A list of candidate activities retrieved from a database (with sheet, activity, and code).
+
+    Your task:
+    1. Pick the single best candidate ONLY from the list.
+    2. Do not invent or create new activities. 
+    3. Prefer semantic matches (e.g., "hydropanels" → "solar equipment trading", not "swimming pools").
+    4. Act as a strict classifier who knows the domain well as ISIC codes.
+    5. Return ONLY a JSON object with these keys:
+    - query
+    - sheet (string )
+    - activity (string )
+    - code (string)
+    - reason (short explanation)
+
+    User query: "{query}"
+
+    Candidates:{all_candidates}
+    """
     response = llm.invoke(prompt)
     parsed = parse_json_like(response.content)
 
