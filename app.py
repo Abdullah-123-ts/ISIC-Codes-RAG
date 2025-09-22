@@ -139,7 +139,7 @@ def search_activity(query: str, dataframes: dict, vectorstores: dict, use_llm: b
     # 2) Vector similarity search
     all_candidates = []
     for sheet in SHEETS_ORDER:
-        docs = vectorstores[sheet].similarity_search(query, k=3)
+        docs = vectorstores[sheet].similarity_search(query, k=5)
         for d in docs:
             all_candidates.append({
                 "query" : query,
@@ -165,7 +165,10 @@ def search_activity(query: str, dataframes: dict, vectorstores: dict, use_llm: b
     llm = ChatOpenAI(model="gpt-4o-mini", openai_api_key=OPENAI_API_KEY, temperature=0)
     prompt = f"""
 You are given a user's query and candidate activities with their sheet names and codes.
-Choose the single best match and return ONLY a JSON object with keys:
+Choose the single best match based not only on related names like don't match hydropanel to swimming pool instead use
+semantic understanding of the activity. Also, try to infer the correct activity not just syntactically but semantically.
+Act like an expert in business activities classification especially ISIC codes.
+and return ONLY a JSON object with keys:
   - sheet
   - activity
   - code
@@ -217,11 +220,11 @@ def main():
     vectorstores = {sheet: load_or_create_vectorstore(sheet, df) for sheet, df in dataframes.items()}
 
     query = st.text_area("Enter one or multiple activities (comma or newline separated):")
-    use_llm = st.checkbox("Use LLM refinement (slower, more accurate)", value=False)
+    # use_llm = st.checkbox("Use LLM refinement (slower, more accurate)", value=False)
 
     if st.button("Search") and query:
         queries = [q.strip() for q in re.split(r"[,\n]", query) if q.strip()]
-        results = search_multiple_activities(queries, dataframes, vectorstores, use_llm=use_llm)
+        results = search_multiple_activities(queries, dataframes, vectorstores, use_llm=True)
 
         for res in results:
             st.subheader(res.get("activity") or "No match")
