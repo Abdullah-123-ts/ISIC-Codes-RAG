@@ -227,7 +227,7 @@ def main():
 
     vectorstores = {sheet: load_or_create_vectorstore(sheet, df) for sheet, df in dataframes.items()}
 
-    query = st.text_area("Enter one or multiple activities (comma or newline separated):")
+    query = st.text_area("Enter one or multiple activities (each on a newline):")
     # use_llm = st.checkbox("Use LLM refinement (slower, more accurate)", value=False)
 
     if st.button("Search") and query:
