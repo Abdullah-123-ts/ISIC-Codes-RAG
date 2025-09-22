@@ -223,7 +223,7 @@ def main():
     # use_llm = st.checkbox("Use LLM refinement (slower, more accurate)", value=False)
 
     if st.button("Search") and query:
-        queries = [q.strip() for q in re.split(r"[,\n]", query) if q.strip()]
+        queries = [q.strip() for q in re.split(r"[\n]", query) if q.strip()]
         results = search_multiple_activities(queries, dataframes, vectorstores, use_llm=True)
 
         for res in results:
