@@ -1,4 +1,10 @@
 
+# Improved rag_app.py — returns structured (human-friendly) results instead of raw JSON
+# - Robust fuzzy exact match
+# - FAISS vectorstore per sheet
+# - LLM refinement with strict JSON instruction and robust parsing fallback
+# - Streamlit UI shows a readable result instead of raw LLM JSON
+
 import os
 import re
 import json
